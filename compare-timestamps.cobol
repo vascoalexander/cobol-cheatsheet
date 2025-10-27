@@ -1,45 +1,28 @@
        IDENTIFICATION DIVISION.
-       PROGRAM-ID. TIMESTAMP-CHECK.
+       PROGRAM-ID. DATE-CHECK.
 
        DATA DIVISION.
        WORKING-STORAGE SECTION.
 
-      * Eingabe-Timestamp
+      * Eingabe-Timestamp (nur Datum wird verwendet)
        01  WS-INPUT-TIMESTAMP      PIC X(23).
-           88  VALID-FORMAT        VALUE SPACES THRU HIGH-VALUES.
 
-      * Zerlegte Timestamp-Felder
-       01  WS-TS-DATE.
-           05  WS-TS-YEAR          PIC 9(4).
-           05  FILLER              PIC X VALUE '-'.
-           05  WS-TS-MONTH         PIC 9(2).
-           05  FILLER              PIC X VALUE '-'.
-           05  WS-TS-DAY           PIC 9(2).
-
-       01  WS-TS-TIME.
-           05  WS-TS-HOUR          PIC 9(2).
-           05  FILLER              PIC X VALUE ':'.
-           05  WS-TS-MINUTE        PIC 9(2).
-           05  FILLER              PIC X VALUE ':'.
-           05  WS-TS-SECOND        PIC 9(2).
-           05  FILLER              PIC X VALUE '.'.
-           05  WS-TS-MILLISEC      PIC 9(3).
+      * Zerlegte Datumsfelder
+       01  WS-TS-YEAR              PIC 9(4).
+       01  WS-TS-MONTH             PIC 9(2).
+       01  WS-TS-DAY               PIC 9(2).
 
       * Aktuelle Systemzeit
        01  WS-CURRENT-DATE.
            05  WS-CURR-YEAR        PIC 9(4).
            05  WS-CURR-MONTH       PIC 9(2).
            05  WS-CURR-DAY         PIC 9(2).
-           05  WS-CURR-HOUR        PIC 9(2).
-           05  WS-CURR-MINUTE      PIC 9(2).
-           05  WS-CURR-SECOND      PIC 9(2).
-           05  WS-CURR-MILLISEC    PIC 9(2).
+           05  FILLER              PIC X(14).
 
       * Berechnungsfelder für 6 Monate zurück
-       01  WS-CALC-FIELDS.
-           05  WS-CALC-YEAR        PIC 9(4).
-           05  WS-CALC-MONTH       PIC 9(2).
-           05  WS-CALC-DAY         PIC 9(2).
+       01  WS-CALC-YEAR            PIC 9(4).
+       01  WS-CALC-MONTH           PIC 9(2).
+       01  WS-CALC-DAY             PIC 9(2).
 
       * Vergleichsfelder (YYYYMMDD Format)
        01  WS-TS-COMPARE           PIC 9(8).
@@ -50,25 +33,24 @@
        PROCEDURE DIVISION.
        MAIN-LOGIC.
       * Beispiel-Timestamp setzen
-           MOVE '2025-04-26 14:30:45.123' TO WS-INPUT-TIMESTAMP
+           MOVE '2025-04-27 14:30:45.123' TO WS-INPUT-TIMESTAMP
 
-      * Timestamp zerlegen
-           UNSTRING WS-INPUT-TIMESTAMP DELIMITED BY '-' OR ' ' OR ':'
+      * Nur Datumsteil extrahieren (erste 10 Zeichen: YYYY-MM-DD)
+           UNSTRING WS-INPUT-TIMESTAMP(1:10) DELIMITED BY '-'
                INTO WS-TS-YEAR
                     WS-TS-MONTH
                     WS-TS-DAY
-                    WS-TS-HOUR
-                    WS-TS-MINUTE
-                    WS-TS-SECOND
            END-UNSTRING
 
       * Aktuelle Systemzeit holen
            MOVE FUNCTION CURRENT-DATE TO WS-CURRENT-DATE
 
       * 6 Monate vom aktuellen Datum zurückrechnen
-           COMPUTE WS-CALC-YEAR = WS-CURR-YEAR
-           COMPUTE WS-CALC-MONTH = WS-CURR-MONTH - 6
-           COMPUTE WS-CALC-DAY = WS-CURR-DAY
+           MOVE WS-CURR-YEAR  TO WS-CALC-YEAR
+           MOVE WS-CURR-MONTH TO WS-CALC-MONTH
+           MOVE WS-CURR-DAY   TO WS-CALC-DAY
+
+           SUBTRACT 6 FROM WS-CALC-MONTH
 
       * Jahresübertrag behandeln
            IF WS-CALC-MONTH < 1
@@ -89,13 +71,12 @@
 
       * Vergleich durchführen
            IF WS-TS-COMPARE < WS-THRESHOLD-COMPARE
-               MOVE 'Timestamp ist älter als 6 Monate' TO WS-RESULT
-               DISPLAY WS-RESULT
+               MOVE 'Älter als 6 Monate' TO WS-RESULT
            ELSE
-               MOVE 'Timestamp ist jünger als 6 Monate' TO WS-RESULT
-               DISPLAY WS-RESULT
+               MOVE 'Jünger als 6 Monate' TO WS-RESULT
            END-IF
 
+           DISPLAY 'Ergebnis:        ' WS-RESULT
            DISPLAY 'Timestamp-Datum: ' WS-TS-COMPARE
            DISPLAY 'Schwellenwert:   ' WS-THRESHOLD-COMPARE
 
